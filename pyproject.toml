@@ -1,0 +1,14 @@
+[project]
+name = "multilayer-rpl-dra"
+version = "0.1.0"
+description = "Comparative multilayer graph learning benchmark for decreased rank attack detection in RPL-IoT networks."
+requires-python = ">=3.10"
+dependencies = [
+  "numpy>=1.26",
+  "pandas>=2.0",
+  "matplotlib>=3.8"
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]

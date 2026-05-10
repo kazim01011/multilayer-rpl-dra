@@ -1,0 +1,43 @@
+{
+  "run_name": "ablation_smoke",
+  "seed": 42,
+  "seeds": [42],
+  "simulation": {
+    "num_nodes": 50,
+    "root_id": 0,
+    "malicious_ratios": [0.1],
+    "num_graphs_per_ratio": 16,
+    "area_size": 220.0,
+    "transmission_range": 100.0,
+    "simulation_time_s": 3600,
+    "rank_drop_min": 1,
+    "rank_drop_max": 3
+  },
+  "split": {
+    "train": 0.6,
+    "validation": 0.2,
+    "test": 0.2
+  },
+  "training": {
+    "epochs": 80,
+    "learning_rate": 0.005,
+    "hidden_dim": 32,
+    "batch_size": 128,
+    "patience": 20
+  },
+  "models": [
+    "dqn",
+    "ddqn",
+    "dueling_ddqn",
+    "ml_gcn",
+    "attn_ml_gcn",
+    "ml_gcn_routing",
+    "ml_gcn_link_quality",
+    "ml_gcn_temporal",
+    "ml_gcn_trust",
+    "ml_gcn_no_routing",
+    "ml_gcn_no_link_quality",
+    "ml_gcn_no_temporal",
+    "ml_gcn_no_trust"
+  ]
+}

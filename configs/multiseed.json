@@ -1,0 +1,29 @@
+{
+  "run_name": "multiseed",
+  "seed": 42,
+  "seeds": [42, 777, 1024, 2025, 9090],
+  "simulation": {
+    "num_nodes": 50,
+    "root_id": 0,
+    "malicious_ratios": [0.1, 0.2, 0.3],
+    "num_graphs_per_ratio": 120,
+    "area_size": 220.0,
+    "transmission_range": 100.0,
+    "simulation_time_s": 3600,
+    "rank_drop_min": 1,
+    "rank_drop_max": 3
+  },
+  "split": {
+    "train": 0.6,
+    "validation": 0.2,
+    "test": 0.2
+  },
+  "training": {
+    "epochs": 250,
+    "learning_rate": 0.005,
+    "hidden_dim": 64,
+    "batch_size": 256,
+    "patience": 40
+  },
+  "models": ["dqn", "ddqn", "dueling_ddqn", "ml_gcn", "attn_ml_gcn"]
+}
