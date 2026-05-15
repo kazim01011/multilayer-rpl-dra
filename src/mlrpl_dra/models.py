@@ -33,6 +33,7 @@ class ModelConfig:
     hidden_dim: int
     learning_rate: float
     seed: int
+    positive_class_weight: float = 1.0
     layers: tuple[str, ...] = LAYER_NAMES
 
 
@@ -65,6 +66,7 @@ class QNetworkClassifier(BaseModel):
         self.rng = np.random.default_rng(cfg.seed)
         h = cfg.hidden_dim
         self.lr = cfg.learning_rate
+        self.positive_class_weight = cfg.positive_class_weight
         self.weights = {
             "w1": self.rng.normal(0.0, np.sqrt(2.0 / cfg.input_dim), size=(cfg.input_dim, h)),
             "b1": np.zeros(h),
@@ -86,9 +88,11 @@ class QNetworkClassifier(BaseModel):
         logits, cache = self._forward(x)
         probs = softmax(logits)
         target = one_hot(y)
-        loss = -np.mean(np.sum(target * np.log(np.maximum(probs, 1e-12)), axis=1))
+        weights = np.where(y.astype(int) == 1, self.positive_class_weight, 1.0)
+        normalizer = max(float(weights.sum()), 1.0)
+        loss = -float(np.sum(weights * np.sum(target * np.log(np.maximum(probs, 1e-12)), axis=1)) / normalizer)
 
-        dlogits = (probs - target) / max(x.shape[0], 1)
+        dlogits = (probs - target) * weights[:, None] / normalizer
         dw3 = cache["h2"].T @ dlogits
         db3 = dlogits.sum(axis=0)
         dh2 = dlogits @ self.weights["w3"].T
@@ -154,6 +158,7 @@ class DuelingDDQNClassifier(BaseModel):
         self.rng = np.random.default_rng(cfg.seed)
         h = cfg.hidden_dim
         self.lr = cfg.learning_rate
+        self.positive_class_weight = cfg.positive_class_weight
         self.weights = {
             "w1": self.rng.normal(0.0, np.sqrt(2.0 / cfg.input_dim), size=(cfg.input_dim, h)),
             "b1": np.zeros(h),
@@ -179,9 +184,11 @@ class DuelingDDQNClassifier(BaseModel):
         logits, cache = self._forward(x)
         probs = softmax(logits)
         target = one_hot(y)
-        loss = -np.mean(np.sum(target * np.log(np.maximum(probs, 1e-12)), axis=1))
+        weights = np.where(y.astype(int) == 1, self.positive_class_weight, 1.0)
+        normalizer = max(float(weights.sum()), 1.0)
+        loss = -float(np.sum(weights * np.sum(target * np.log(np.maximum(probs, 1e-12)), axis=1)) / normalizer)
 
-        dlogits = (probs - target) / max(x.shape[0], 1)
+        dlogits = (probs - target) * weights[:, None] / normalizer
         dvalue = dlogits.sum(axis=1, keepdims=True)
         dadv = dlogits - dlogits.mean(axis=1, keepdims=True)
 
@@ -231,6 +238,7 @@ class MultilayerGCN(BaseModel):
     def __init__(self, cfg: ModelConfig):
         self.rng = np.random.default_rng(cfg.seed)
         self.lr = cfg.learning_rate
+        self.positive_class_weight = cfg.positive_class_weight
         self.layers = tuple(cfg.layers)
         h = cfg.hidden_dim
         self.relation_weights = {
@@ -263,14 +271,18 @@ class MultilayerGCN(BaseModel):
         grad_out_w = np.zeros_like(self.out_w)
         grad_out_b = np.zeros_like(self.out_b)
         losses = []
-        total_nodes = sum(g.labels.shape[0] for g in graphs)
+        total_weight = sum(
+            float(np.where(g.labels.astype(int) == 1, self.positive_class_weight, 1.0).sum())
+            for g in graphs
+        )
 
         for graph in graphs:
             logits, cache = self._forward_graph(graph)
             probs = softmax(logits)
             target = one_hot(graph.labels)
-            losses.append(-np.mean(np.sum(target * np.log(np.maximum(probs, 1e-12)), axis=1)))
-            dlogits = (probs - target) / max(total_nodes, 1)
+            weights = np.where(graph.labels.astype(int) == 1, self.positive_class_weight, 1.0)
+            losses.append(-float(np.sum(weights * np.sum(target * np.log(np.maximum(probs, 1e-12)), axis=1)) / max(float(weights.sum()), 1.0)))
+            dlogits = (probs - target) * weights[:, None] / max(total_weight, 1.0)
             grad_out_w += cache["hidden"].T @ dlogits
             grad_out_b += dlogits.sum(axis=0)
             dhidden = dlogits @ self.out_w.T
@@ -313,6 +325,7 @@ class AttentionMultilayerGCN(BaseModel):
     def __init__(self, cfg: ModelConfig):
         self.rng = np.random.default_rng(cfg.seed)
         self.lr = cfg.learning_rate
+        self.positive_class_weight = cfg.positive_class_weight
         self.layers = tuple(cfg.layers)
         h = cfg.hidden_dim
         self.relation_weights = {
@@ -358,14 +371,18 @@ class AttentionMultilayerGCN(BaseModel):
         grad_out_w = np.zeros_like(self.out_w)
         grad_out_b = np.zeros_like(self.out_b)
         losses = []
-        total_nodes = sum(g.labels.shape[0] for g in graphs)
+        total_weight = sum(
+            float(np.where(g.labels.astype(int) == 1, self.positive_class_weight, 1.0).sum())
+            for g in graphs
+        )
 
         for graph in graphs:
             logits, cache = self._forward_graph(graph)
             probs = softmax(logits)
             target = one_hot(graph.labels)
-            losses.append(-np.mean(np.sum(target * np.log(np.maximum(probs, 1e-12)), axis=1)))
-            dlogits = (probs - target) / max(total_nodes, 1)
+            weights = np.where(graph.labels.astype(int) == 1, self.positive_class_weight, 1.0)
+            losses.append(-float(np.sum(weights * np.sum(target * np.log(np.maximum(probs, 1e-12)), axis=1)) / max(float(weights.sum()), 1.0)))
+            dlogits = (probs - target) * weights[:, None] / max(total_weight, 1.0)
             hidden = cache["hidden"]
             alpha = cache["alpha"]
             gate = cache["gate"]
@@ -461,5 +478,6 @@ def _model_config_with_layers(cfg: ModelConfig, name: str) -> ModelConfig:
         hidden_dim=cfg.hidden_dim,
         learning_rate=cfg.learning_rate,
         seed=cfg.seed,
+        positive_class_weight=cfg.positive_class_weight,
         layers=layer_map[name],
     )

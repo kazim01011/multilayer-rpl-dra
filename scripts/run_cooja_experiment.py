@@ -65,6 +65,13 @@ def main() -> None:
     parser.add_argument("--epochs", type=int, default=350)
     parser.add_argument("--hidden-dim", type=int, default=24)
     parser.add_argument("--learning-rate", type=float, default=0.01)
+    parser.add_argument("--positive-class-weight", type=float, default=1.0)
+    parser.add_argument(
+        "--threshold-metric",
+        choices=["balanced_accuracy", "f1", "precision", "recall", "accuracy"],
+        default="balanced_accuracy",
+        help="Validation metric used to select the classification threshold.",
+    )
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument(
         "--split-policy",
@@ -122,7 +129,16 @@ def main() -> None:
         )
     rows = []
     for model_name in args.models:
-        metrics = evaluate_model(model_name, cfg, train_graphs, val_graphs, test_graphs, args.seed)
+        metrics = evaluate_model(
+            model_name,
+            cfg,
+            train_graphs,
+            val_graphs,
+            test_graphs,
+            args.seed,
+            threshold_metric=args.threshold_metric,
+            positive_class_weight=args.positive_class_weight,
+        )
         metrics["num_train_graphs"] = len(train_graphs)
         metrics["num_validation_graphs"] = len(val_graphs)
         metrics["num_test_graphs"] = len(test_graphs)

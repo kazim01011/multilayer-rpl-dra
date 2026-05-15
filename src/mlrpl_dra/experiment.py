@@ -38,6 +38,8 @@ def evaluate_model(
     val_graphs: list[RPLGraph],
     test_graphs: list[RPLGraph],
     seed: int,
+    threshold_metric: str = "balanced_accuracy",
+    positive_class_weight: float = 1.0,
 ) -> dict[str, float | str]:
     input_dim = train_graphs[0].features.shape[1]
     model_cfg = ModelConfig(
@@ -45,20 +47,28 @@ def evaluate_model(
         hidden_dim=cfg.training.hidden_dim,
         learning_rate=cfg.training.learning_rate,
         seed=seed + stable_model_offset(model_name),
+        positive_class_weight=positive_class_weight,
     )
     model = build_model(model_name, model_cfg)
     model.fit(train_graphs, val_graphs, cfg.training.epochs, cfg.training.patience)
 
     val_y = labels_for(val_graphs)
     val_prob = model.predict_graphs(val_graphs)
-    threshold, val_bacc = pick_threshold(val_y, val_prob)
+    threshold, val_score = pick_threshold(val_y, val_prob, metric=threshold_metric)
 
     test_y = labels_for(test_graphs)
     test_prob = model.predict_graphs(test_graphs)
     out = binary_metrics(test_y, test_prob, threshold)
     out["model"] = model_name
     out["threshold"] = threshold
-    out["validation_balanced_accuracy"] = val_bacc
+    out["threshold_metric"] = threshold_metric
+    out[f"validation_{threshold_metric}"] = val_score
+    if threshold_metric != "balanced_accuracy":
+        _, val_bacc = pick_threshold(val_y, val_prob, metric="balanced_accuracy")
+        out["validation_balanced_accuracy"] = val_bacc
+    else:
+        out["validation_balanced_accuracy"] = val_score
+    out["positive_class_weight"] = positive_class_weight
     out.update(model.diagnostics())
     return out
 

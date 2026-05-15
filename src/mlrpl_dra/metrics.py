@@ -36,13 +36,15 @@ def binary_metrics(y_true: np.ndarray, y_prob: np.ndarray, threshold: float = 0.
     }
 
 
-def pick_threshold(y_true: np.ndarray, y_prob: np.ndarray) -> tuple[float, float]:
+def pick_threshold(y_true: np.ndarray, y_prob: np.ndarray, metric: str = "balanced_accuracy") -> tuple[float, float]:
     best_threshold = 0.5
-    best_bacc = -1.0
+    best_score = -1.0
     for threshold in np.linspace(0.05, 0.95, 91):
-        score = binary_metrics(y_true, y_prob, float(threshold))["balanced_accuracy"]
-        if score > best_bacc:
-            best_bacc = score
+        scores = binary_metrics(y_true, y_prob, float(threshold))
+        if metric not in scores:
+            raise ValueError(f"Unknown threshold metric: {metric}")
+        score = scores[metric]
+        if score > best_score:
+            best_score = score
             best_threshold = float(threshold)
-    return best_threshold, best_bacc
-
+    return best_threshold, best_score
