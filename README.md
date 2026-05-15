@@ -4,8 +4,10 @@ This repository contains the experiment code for a comparative study of
 decreased rank attack (DRA) detection in RPL-based low-power and lossy IoT
 networks.
 
-The first implementation uses a controlled synthetic RPL-DODAG simulator with
-the same reported high-level parameters as the reference study:
+The repository includes both a lightweight synthetic RPL-DODAG generator for
+development checks and a Cooja/Contiki-NG trace-driven workflow used for the
+paper experiments. The synthetic configuration is retained for fast smoke
+testing and uses:
 
 - 50 total nodes
 - 1 DODAG root
@@ -14,17 +16,26 @@ the same reported high-level parameters as the reference study:
 - 3600 s simulation window
 - node features: ID, rank, cumulative RSSI, delay, and hop count
 
-The code compares flat-feature DQN-style baselines against multilayer graph
-models that represent each RPL network using routing, link-quality, temporal,
-and trust/anomaly layers. The main proposed model is an attention-weighted
-multilayer GCN that learns how much each relation layer should contribute.
+The paper benchmark uses parsed Cooja/Contiki-NG RPL-DRA traces. The Cooja
+experiment uses 50 nodes, one RPL root, and 10%, 20%, and 30%
+decreased-rank attackers across multiple seeds. Raw `COOJA.testlog` files are
+parsed into node snapshots and then converted into the same `RPLGraph`
+representation used by the benchmark models.
+
+The code compares non-graph DQN-style baselines against graph-based models
+that represent each RPL network using routing, link-quality, temporal, and
+trust/anomaly layers. The main comparison is graph versus non-graph learning:
+ML-GCN tests fixed multilayer message passing, while Attn-ML-GCN tests whether
+attention-weighted layer fusion changes performance and interpretability.
 
 ## Repository Layout
 
 ```text
 configs/                Experiment configurations
+cooja/                  Contiki-NG app and patch for Cooja trace generation
 scripts/                Command-line entry points
 src/mlrpl_dra/          Simulator, models, metrics, and training code
+data/cooja*/            Parsed Cooja trace tables
 results/                Generated outputs, ignored by git except .gitkeep
 tests/                  Lightweight smoke tests
 ```
@@ -71,12 +82,42 @@ python scripts/make_figures.py results/multiseed
 Figures are written as both PNG and PDF files under
 `results/<run_name>/figures/`.
 
+## Cooja Trace Workflow
+
+After running the Contiki-NG/Cooja simulations, parse the generated logs:
+
+```bash
+python scripts/parse_cooja_logs.py \
+  --log-root "/path/to/cooja-contiki-ng/examples/rpl-dra-ml/generated" \
+  --output data/cooja
+```
+
+This writes:
+
+- `data/cooja/trace_events.csv`
+- `data/cooja/packet_events.csv`
+- `data/cooja/dra_events.csv`
+- `data/cooja/node_snapshots.csv`
+- `data/cooja/graph_summary.csv`
+
+Run the benchmark models on parsed Cooja graph snapshots:
+
+```bash
+python scripts/run_cooja_experiment.py \
+  --snapshots data/cooja/node_snapshots.csv \
+  --output results/cooja_seed1
+```
+
+For the paper benchmark, the checked-in `data/cooja_clean_5seed/` dataset
+contains the parsed five-seed Cooja traces used for the held-out-seed
+evaluation.
+
 ## Scientific Framing
 
-The baseline models are reimplemented under the reported experimental
-conditions and evaluated on the same generated datasets as the proposed
-multilayer model. This supports controlled comparison without claiming exact
-reproduction of any unpublished implementation.
+The benchmark is a comparative graph-versus-non-graph study. All models are
+trained and tested on the same parsed Cooja node observations and labels; the
+key experimental difference is whether a model receives only flat node
+features or also receives the explicit multilayer RPL graph structure.
 
 ## Current Configs
 

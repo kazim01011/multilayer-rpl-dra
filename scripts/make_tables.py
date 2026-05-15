@@ -21,22 +21,29 @@ def overall_table(metrics: pd.DataFrame) -> pd.DataFrame:
     grouped = metrics.groupby("model")[METRICS].agg(["mean", "std"])
     rows = []
     for model, values in grouped.iterrows():
-        row = {"model": model}
+        row = {"model": model, "_sort": values[("balanced_accuracy", "mean")]}
         for metric in METRICS:
             row[metric] = fmt(values[(metric, "mean")], values[(metric, "std")])
         rows.append(row)
-    return pd.DataFrame(rows).sort_values("balanced_accuracy", ascending=False)
+    return pd.DataFrame(rows).sort_values("_sort", ascending=False).drop(columns="_sort")
 
 
 def ratio_table(metrics: pd.DataFrame) -> pd.DataFrame:
+    if "malicious_ratio" not in metrics.columns:
+        return pd.DataFrame()
+
     grouped = metrics.groupby(["malicious_ratio", "model"])[METRICS].agg(["mean", "std"])
     rows = []
     for (ratio, model), values in grouped.iterrows():
-        row = {"malicious_ratio": ratio, "model": model}
+        row = {"malicious_ratio": ratio, "model": model, "_sort": values[("balanced_accuracy", "mean")]}
         for metric in METRICS:
             row[metric] = fmt(values[(metric, "mean")], values[(metric, "std")])
         rows.append(row)
-    return pd.DataFrame(rows).sort_values(["malicious_ratio", "balanced_accuracy"], ascending=[True, False])
+    return (
+        pd.DataFrame(rows)
+        .sort_values(["malicious_ratio", "_sort"], ascending=[True, False])
+        .drop(columns="_sort")
+    )
 
 
 def markdown_table(df: pd.DataFrame) -> str:
@@ -85,13 +92,15 @@ def main() -> None:
     attention_section = ""
     if not attention.empty:
         attention_section = "\n\n## Learned Layer Attention Mean +/- Std\n\n" + markdown_table(attention) + "\n"
+    ratio_section = ""
+    if not by_ratio.empty:
+        ratio_section = "\n\n## By Attack Ratio Mean +/- Std\n\n" + markdown_table(by_ratio)
     out = result_dir / "paper_tables.md"
     out.write_text(
         "# Paper Tables\n\n"
         "## Overall Mean +/- Std\n\n"
         + markdown_table(overall)
-        + "\n\n## By Attack Ratio Mean +/- Std\n\n"
-        + markdown_table(by_ratio)
+        + ratio_section
         + attention_section
         + "\n",
         encoding="utf-8",
