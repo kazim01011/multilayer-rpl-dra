@@ -112,17 +112,17 @@ For the paper benchmark, the checked-in `data/cooja_clean_5seed/` dataset
 contains the parsed five-seed Cooja traces used for the held-out-seed
 evaluation.
 
-The tuned held-out-seed setting used to improve the graph-model F1 score is:
+The validation-selected held-out-seed setting reported in the paper is:
 
 ```bash
 python scripts/run_cooja_experiment.py \
   --snapshots data/cooja_clean_5seed/node_snapshots.csv \
-  --output results/cooja_clean_5seed_tuned_best_setting \
+  --output results/cooja_clean_5seed_validation_selected \
   --models dqn ddqn dueling_ddqn ml_gcn attn_ml_gcn \
   --epochs 350 \
   --hidden-dim 48 \
-  --learning-rate 0.03 \
-  --positive-class-weight 1 \
+  --learning-rate 0.02 \
+  --positive-class-weight 2 \
   --threshold-metric f1
 ```
 
