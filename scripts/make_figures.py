@@ -17,6 +17,11 @@ METRIC_LABELS = {
     "fpr": "False positive rate",
 }
 MODEL_LABELS = {
+    "logistic_regression": "Logistic Regression",
+    "random_forest": "Random Forest",
+    "xgboost": "XGBoost",
+    "lightgbm": "LightGBM",
+    "mlp": "MLP",
     "dqn": "DQN",
     "ddqn": "DDQN",
     "dueling_ddqn": "Dueling DDQN",
@@ -32,6 +37,11 @@ MODEL_LABELS = {
     "ml_gcn_no_trust": "No trust",
 }
 MODEL_ORDER = [
+    "logistic_regression",
+    "random_forest",
+    "xgboost",
+    "lightgbm",
+    "mlp",
     "dqn",
     "ddqn",
     "dueling_ddqn",
@@ -47,9 +57,14 @@ MODEL_ORDER = [
     "ml_gcn_no_trust",
 ]
 MODEL_COLORS = {
+    "logistic_regression": "#4C78A8",
+    "random_forest": "#72B7B2",
+    "xgboost": "#2F855A",
+    "lightgbm": "#88B04B",
+    "mlp": "#B279A2",
     "dqn": "#7A869A",
-    "ddqn": "#4C78A8",
-    "dueling_ddqn": "#72B7B2",
+    "ddqn": "#9D755D",
+    "dueling_ddqn": "#BAB0AC",
     "ml_gcn": "#F58518",
     "attn_ml_gcn": "#E45756",
     "ml_gcn_routing": "#4C78A8",
@@ -105,23 +120,25 @@ def summary_stats(metrics: pd.DataFrame, cols: list[str]) -> pd.DataFrame:
 
 
 def plot_overall_model_comparison(metrics: pd.DataFrame, out_dir: Path) -> None:
-    stats = summary_stats(metrics, ["balanced_accuracy", "f1"])
+    stats = summary_stats(metrics, ["balanced_accuracy", "f1", "precision", "recall", "fpr"])
     models = stats["model"].to_list()
     labels = [MODEL_LABELS.get(model, model) for model in models]
     x = np.arange(len(models))
-    width = 0.36
+    width_left = 0.36
+    width_right = 0.24
 
-    fig, ax = plt.subplots(figsize=(7.2, 4.0))
+    fig, axes = plt.subplots(1, 2, figsize=(12.0, 4.2), gridspec_kw={"width_ratios": [1.0, 1.15]})
+    ax = axes[0]
     for offset, metric, color in [
-        (-width / 2, "balanced_accuracy", "#3B6FB6"),
-        (width / 2, "f1", "#D55E00"),
+        (-width_left / 2, "balanced_accuracy", "#3B6FB6"),
+        (width_left / 2, "f1", "#D55E00"),
     ]:
         means = stats[(metric, "mean")].to_numpy()
         stds = stats[(metric, "std")].fillna(0.0).to_numpy()
         ax.bar(
             x + offset,
             means,
-            width,
+            width_left,
             yerr=stds,
             capsize=3,
             color=color,
@@ -131,12 +148,37 @@ def plot_overall_model_comparison(metrics: pd.DataFrame, out_dir: Path) -> None:
         )
 
     ax.set_xticks(x)
-    ax.set_xticklabels(labels, rotation=20, ha="right")
+    ax.set_xticklabels(labels, rotation=35, ha="right")
     ax.set_ylim(*metric_ylim(stats[[("balanced_accuracy", "mean"), ("f1", "mean")]].to_numpy().ravel()))
     ax.set_ylabel("Score")
+    ax.set_title("(a) Primary detection metrics", loc="left", fontweight="bold")
     ax.legend(frameon=False, ncols=2, loc="upper center", bbox_to_anchor=(0.5, 1.18))
     clean_axis(ax)
-    fig.subplots_adjust(top=0.82)
+
+    ax = axes[1]
+    for idx, metric in enumerate(["precision", "recall", "fpr"]):
+        means = stats[(metric, "mean")].to_numpy()
+        stds = stats[(metric, "std")].fillna(0.0).to_numpy()
+        ax.bar(
+            x + (idx - 1) * width_right,
+            means,
+            width_right,
+            yerr=stds,
+            capsize=3,
+            color=["#4C78A8", "#54A24B", "#E45756"][idx],
+            edgecolor="#263238",
+            linewidth=0.5,
+            label=METRIC_LABELS[metric],
+        )
+
+    ax.set_xticks(x)
+    ax.set_xticklabels(labels, rotation=35, ha="right")
+    ax.set_ylim(0.0, 1.0)
+    ax.set_ylabel("Score")
+    ax.set_title("(b) Precision-recall-FPR tradeoff", loc="left", fontweight="bold")
+    ax.legend(frameon=False, ncols=3, loc="upper center", bbox_to_anchor=(0.5, 1.18))
+    clean_axis(ax)
+    fig.subplots_adjust(top=0.80, wspace=0.24)
     save_figure(fig, out_dir, "fig01_overall_model_comparison")
 
 
