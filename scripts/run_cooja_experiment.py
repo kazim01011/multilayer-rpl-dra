@@ -59,7 +59,7 @@ def main() -> None:
     parser.add_argument(
         "--models",
         nargs="+",
-        default=["dqn", "ddqn", "dueling_ddqn", "ml_gcn", "attn_ml_gcn"],
+        default=["dqn", "ddqn", "dueling_ddqn", "agg_gcn", "ml_gcn", "attn_ml_gcn"],
         help="Model names to evaluate.",
     )
     parser.add_argument("--epochs", type=int, default=350)

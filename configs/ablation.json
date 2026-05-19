@@ -29,6 +29,7 @@
     "dqn",
     "ddqn",
     "dueling_ddqn",
+    "agg_gcn",
     "ml_gcn",
     "attn_ml_gcn",
     "ml_gcn_routing",

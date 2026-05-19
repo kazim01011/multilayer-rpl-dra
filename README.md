@@ -22,11 +22,12 @@ decreased-rank attackers across multiple seeds. Raw `COOJA.testlog` files are
 parsed into node snapshots and then converted into the same `RPLGraph`
 representation used by the benchmark models.
 
-The code compares non-graph DQN-style baselines against graph-based models
-that represent each RPL network using routing, link-quality, temporal, and
-trust/anomaly layers. The main comparison is graph versus non-graph learning:
-ML-GCN tests fixed multilayer message passing, while Attn-ML-GCN tests whether
-attention-weighted layer fusion changes performance and interpretability.
+The code compares non-graph baselines against graph-based models that represent
+each RPL network using routing, link-quality, temporal, and trust/anomaly
+layers. The main comparison is graph versus non-graph learning: Agg-GCN tests a
+collapsed single-graph support, ML-GCN tests fixed multilayer message passing,
+and Attn-ML-GCN tests whether attention-weighted layer fusion changes
+performance and interpretability.
 
 ## Repository Layout
 
@@ -118,12 +119,20 @@ The validation-selected held-out-seed setting reported in the paper is:
 python scripts/run_cooja_experiment.py \
   --snapshots data/cooja_clean_5seed/node_snapshots.csv \
   --output results/cooja_clean_5seed_validation_selected \
-  --models dqn ddqn dueling_ddqn ml_gcn attn_ml_gcn \
+  --models dqn ddqn dueling_ddqn agg_gcn ml_gcn attn_ml_gcn \
   --epochs 350 \
   --hidden-dim 48 \
   --learning-rate 0.02 \
   --positive-class-weight 2 \
   --threshold-metric f1
+```
+
+Analyze layer structure and aggregation effects:
+
+```bash
+python scripts/analyze_layers.py \
+  --snapshots data/cooja_clean_5seed/node_snapshots.csv \
+  --output results/cooja_clean_5seed_layer_analysis
 ```
 
 For broader hyperparameter search:

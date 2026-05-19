@@ -73,7 +73,7 @@ def main() -> None:
 
     add_box(ax, (6.28, 3.04), (3.25, 1.08), "6A. Flat-feature baselines", "Logistic Regression, Random Forest\nXGBoost, LightGBM, MLP\nDQN, DDQN, Dueling DDQN", *teal)
     add_box(ax, (10.0, 3.18), (3.45, 1.08), "6B. Four RPL relation layers", "A(r): routing; A(q): link quality\nA(t): temporal behavior\nA(a): trust/anomaly similarity", *blue)
-    add_box(ax, (10.0, 1.98), (3.45, 0.92), "7. Proposed graph models", "ML-GCN: fixed multilayer fusion\nAttn-ML-GCN: learned layer weights", *blue)
+    add_box(ax, (10.0, 1.98), (3.45, 0.92), "7. Graph models", "Agg-GCN: collapsed graph\nML-GCN: fixed multilayer fusion\nAttn-ML-GCN: learned layer weights", *blue)
 
     add_box(ax, (6.52, 1.48), (3.65, 0.94), "8. Controlled training protocol", "train: seeds 1-3; validation: seed 4\nselect hyperparameters and F1 threshold", "#9A2F5D", "#FFF5FA")
     add_box(ax, (6.52, 0.38), (3.65, 0.92), "9. Held-out test evaluation", "test: seed 5 only\nBAcc, F1, precision, recall, FPR", *green)

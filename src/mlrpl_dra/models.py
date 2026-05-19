@@ -319,6 +319,95 @@ class MultilayerGCN(BaseModel):
         return np.concatenate(probs)
 
 
+class AggregatedGCN(BaseModel):
+    """GCN baseline over a collapsed single-layer support.
+
+    The model receives the same node features and relation layers as ML-GCN,
+    but first averages all normalized layer supports into one adjacency matrix.
+    This isolates whether keeping layer identity helps beyond using graph
+    connectivity alone.
+    """
+
+    name = "agg_gcn"
+
+    def __init__(self, cfg: ModelConfig):
+        self.rng = np.random.default_rng(cfg.seed)
+        self.lr = cfg.learning_rate
+        self.positive_class_weight = cfg.positive_class_weight
+        self.layers = tuple(cfg.layers)
+        h = cfg.hidden_dim
+        self.w = self.rng.normal(0.0, np.sqrt(2.0 / cfg.input_dim), size=(cfg.input_dim, h))
+        self.out_w = self.rng.normal(0.0, np.sqrt(2.0 / h), size=(h, 2))
+        self.out_b = np.zeros(2)
+
+    def _aggregate_support(self, graph: RPLGraph) -> np.ndarray:
+        support = np.zeros_like(next(iter(graph.layers.values())))
+        for layer in self.layers:
+            support += graph.layers[layer]
+        return support / max(len(self.layers), 1)
+
+    def _forward_graph(self, graph: RPLGraph) -> tuple[np.ndarray, dict[str, np.ndarray]]:
+        aggregated = self._aggregate_support(graph)
+        ax = aggregated @ graph.features
+        z = ax @ self.w
+        hidden = relu(z)
+        logits = hidden @ self.out_w + self.out_b
+        return logits, {
+            "ax": ax,
+            "z": z,
+            "hidden": hidden,
+        }
+
+    def _step(self, graphs: list[RPLGraph]) -> float:
+        grad_w = np.zeros_like(self.w)
+        grad_out_w = np.zeros_like(self.out_w)
+        grad_out_b = np.zeros_like(self.out_b)
+        losses = []
+        total_weight = sum(
+            float(np.where(g.labels.astype(int) == 1, self.positive_class_weight, 1.0).sum())
+            for g in graphs
+        )
+
+        for graph in graphs:
+            logits, cache = self._forward_graph(graph)
+            probs = softmax(logits)
+            target = one_hot(graph.labels)
+            weights = np.where(graph.labels.astype(int) == 1, self.positive_class_weight, 1.0)
+            losses.append(-float(np.sum(weights * np.sum(target * np.log(np.maximum(probs, 1e-12)), axis=1)) / max(float(weights.sum()), 1.0)))
+            dlogits = (probs - target) * weights[:, None] / max(total_weight, 1.0)
+            grad_out_w += cache["hidden"].T @ dlogits
+            grad_out_b += dlogits.sum(axis=0)
+            dhidden = dlogits @ self.out_w.T
+            dz = dhidden * relu_grad(cache["z"])
+            grad_w += cache["ax"].T @ dz
+
+        self.out_w -= self.lr * np.clip(grad_out_w, -5.0, 5.0)
+        self.out_b -= self.lr * np.clip(grad_out_b, -5.0, 5.0)
+        self.w -= self.lr * np.clip(grad_w, -5.0, 5.0)
+        return float(np.mean(losses))
+
+    def fit(self, train_graphs: list[RPLGraph], val_graphs: list[RPLGraph], epochs: int, patience: int) -> None:
+        del val_graphs
+        best_loss = float("inf")
+        stale = 0
+        for _ in range(epochs):
+            loss = self._step(train_graphs)
+            if loss < best_loss - 1e-5:
+                best_loss = loss
+                stale = 0
+            else:
+                stale += 1
+                if stale >= patience:
+                    break
+
+    def predict_graphs(self, graphs: list[RPLGraph]) -> np.ndarray:
+        probs = []
+        for graph in graphs:
+            logits, _ = self._forward_graph(graph)
+            probs.append(softmax(logits)[:, 1])
+        return np.concatenate(probs)
+
+
 class AttentionMultilayerGCN(BaseModel):
     name = "attn_ml_gcn"
 
@@ -445,6 +534,10 @@ def build_model(name: str, cfg: ModelConfig) -> BaseModel:
         cfg = _model_config_with_layers(cfg, name.replace("attn_", "", 1))
         return AttentionMultilayerGCN(cfg)
 
+    if name.startswith("agg_gcn"):
+        cfg = _model_config_with_layers(cfg, name)
+        return AggregatedGCN(cfg)
+
     if name.startswith("ml_gcn"):
         cfg = _model_config_with_layers(cfg, name)
         return MultilayerGCN(cfg)
@@ -461,6 +554,7 @@ def build_model(name: str, cfg: ModelConfig) -> BaseModel:
 
 def _model_config_with_layers(cfg: ModelConfig, name: str) -> ModelConfig:
     layer_map = {
+        "agg_gcn": LAYER_NAMES,
         "ml_gcn": LAYER_NAMES,
         "ml_gcn_routing": ("routing",),
         "ml_gcn_link_quality": ("link_quality",),
