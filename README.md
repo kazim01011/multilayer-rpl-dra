@@ -38,6 +38,7 @@ scripts/                Command-line entry points
 src/mlrpl_dra/          Simulator, models, metrics, and training code
 data/cooja*/            Parsed Cooja trace tables
 results/                Generated outputs, ignored by git except .gitkeep
+appendices/             GitHub supplementary appendices for the manuscript
 tests/                  Lightweight smoke tests
 ```
 
