@@ -1,9 +1,8 @@
-# Supplementary Material
+# Technical Appendices
 
-The supplementary material for the IEEE Internet of Things Journal submission
-is now provided as separate reviewer-facing PDF appendices. These PDFs expand
-the compressed material from the eight-page manuscript with equations,
-figure/table discussion, implementation detail, and reproduction commands.
+The supporting material is provided as separate technical appendix PDFs. These
+documents give the detailed equations, figure and table discussion,
+implementation notes, and reproduction commands referenced by the manuscript.
 
 - [Appendix I: Cooja Trace Generation and Parsing](./appendix_i_cooja_trace_generation.pdf)
 - [Appendix II: Mathematical Model and Training Protocol](./appendix_ii_mathematical_model.pdf)
@@ -11,7 +10,7 @@ figure/table discussion, implementation detail, and reproduction commands.
 - [Appendix IV: Layer Analysis, Ablation, and Propagation Sensitivity](./appendix_iv_layer_analysis.pdf)
 - [Appendix V: Reproduction Commands](./appendix_v_reproduction_commands.pdf)
 
-A combined PDF from the earlier appendix pass is also retained for continuity:
+A combined appendix PDF is also provided:
 [supplementary_material.pdf](./supplementary_material.pdf).
 
 ## Appendix I: Cooja Trace Generation and Parsing
