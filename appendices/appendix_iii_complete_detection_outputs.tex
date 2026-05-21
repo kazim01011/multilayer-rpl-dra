@@ -62,6 +62,15 @@ Agg-GCN performs worse than ML-GCN because it collapses all relation layers into
 
 Attn-ML-GCN remains competitive but does not surpass ML-GCN in this held-out split. This is useful scientifically: the attention mechanism adds interpretability and adaptive layer weighting, but the fixed multilayer model is the strongest detector in the current Cooja setting. The paper therefore avoids overstating attention as universally superior.
 
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.95\textwidth]{appendices/figures/results_model_comparison.png}
+\caption{Overall model-family comparison across flat-feature, aggregate-graph, and multilayer graph models.}
+\label{fig:app3_model_comparison}
+\end{figure}
+
+Figure~\ref{fig:app3_model_comparison} provides the broader visual comparison behind the main result table. The flat-feature models show different precision-recall tradeoffs, but the best operating point is obtained by the fixed-fusion multilayer graph model. The aggregate graph baseline does not match ML-GCN, supporting the interpretation that relation preservation matters more than simply increasing the number of graph edges.
+
 \section{Confusion Matrix}
 \begin{figure}[H]
 \centering

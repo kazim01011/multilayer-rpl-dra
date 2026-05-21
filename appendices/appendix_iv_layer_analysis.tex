@@ -45,6 +45,15 @@ Trust/anomaly & 1154.90 & 0.943 & 0.544\\
 
 The routing and link-quality layers are sparse because each node has a limited parent-child structure. The temporal and trust/anomaly layers are denser because they connect nodes by similarity. If all edges are collapsed into one graph, the dense layers dominate the message-passing support and the model loses the distinction between physical routing relations and behavioral similarity relations.
 
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.95\textwidth]{appendices/figures/results_layer_structure.png}
+\caption{Structural properties of the relation layers, including layer support, density, and overlap patterns.}
+\label{fig:app4_layer_structure}
+\end{figure}
+
+Figure~\ref{fig:app4_layer_structure} shows that the four layers are not interchangeable. Routing and link-quality remain sparse and protocol-local, while temporal and trust/anomaly relations are denser behavioral graphs. This structural asymmetry explains why aggregation can distort the learning problem: a single combined graph is dominated by dense behavioral edges and no longer preserves which relation generated each message-passing path.
+
 \section{Aggregation-Support Figure}
 \begin{figure}[H]
 \centering
@@ -76,6 +85,15 @@ Trust/anomaly only & 0.517 & 0.341 & 0.967\\
 \end{table}
 
 The ablation indicates that routing and link-quality information are highly informative for DRA detection, which is expected because decreased-rank attacks manipulate routing attractiveness. However, the full multilayer model obtains the best F1-score, showing that temporal and anomaly information add useful context when combined with the routing layers. The temporal-only and anomaly-only variants perform poorly because behavioral similarity alone is too broad and can connect benign nodes with similar noisy dynamics.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{appendices/figures/results_ablation.png}
+\caption{Layer-ablation visualization for ML-GCN under the held-out-seed protocol.}
+\label{fig:app4_ablation}
+\end{figure}
+
+Figure~\ref{fig:app4_ablation} complements the ablation table by showing the tradeoff across detection metrics. The full multilayer model is preferred because it provides the best F1-score and balanced accuracy together. The single-layer variants reveal useful evidence channels, but none of them alone provides the same overall detection balance.
 
 \section{Propagation Sensitivity}
 \begin{figure}[H]

@@ -2,8 +2,10 @@
 \usepackage[letterpaper,margin=0.72in]{geometry}
 \usepackage{amsmath,amssymb}
 \usepackage{booktabs}
+\usepackage{graphicx}
 \usepackage{hyperref}
 \usepackage{enumitem}
+\usepackage{float}
 \hypersetup{colorlinks=true,linkcolor=blue,urlcolor=blue}
 \setlength{\parindent}{0pt}
 \setlength{\parskip}{5pt}
@@ -43,6 +45,16 @@ Node-level samples & 6750\\
 \bottomrule
 \end{tabular}
 \end{table}
+
+\section{Trace-Driven Workflow}
+Figure~\ref{fig:app1_workflow} shows the complete trace-driven pipeline. The Cooja/Contiki-NG simulations generate serial logs under multiple DRA ratios and seeds. The parser converts these logs into fixed-width observation windows, extracts observable node and packet fields, and keeps DRA audit events separate. The flat-feature branch receives only the node-feature matrix, whereas graph models additionally receive the relation-specific adjacency matrices. This separation is important because it makes the comparison about representation structure rather than about access to different data sources.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{appendices/figures/flowchart.png}
+\caption{Trace-driven experimental workflow from Cooja/Contiki-NG simulation logs to flat-feature and multilayer graph model evaluation.}
+\label{fig:app1_workflow}
+\end{figure}
 
 \section{DRA Mechanism}
 Let $R_i$ denote the actual RPL rank of node $v_i$ and $R_i^{adv}$ denote the rank that the node advertises in DIO control messages. Under benign operation, the advertised rank is equal to the actual rank:

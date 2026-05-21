@@ -2,8 +2,10 @@
 \usepackage[letterpaper,margin=0.72in]{geometry}
 \usepackage{amsmath,amssymb}
 \usepackage{booktabs}
+\usepackage{graphicx}
 \usepackage{hyperref}
 \usepackage{enumitem}
+\usepackage{float}
 \hypersetup{colorlinks=true,linkcolor=blue,urlcolor=blue}
 \setlength{\parindent}{0pt}
 \setlength{\parskip}{5pt}
@@ -38,6 +40,15 @@ A^{(r)} & \lambda I & \lambda I & \lambda I\\
 \label{eq:app2_supra}
 \end{equation}
 The implementation does not need to materialize this large block matrix. Instead, it computes relation-specific convolutions on the diagonal blocks and performs cross-layer coupling through fusion over the same node replicas. This makes the method easier to ablate because each RPL relation remains identifiable.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{appendices/figures/fig1_multilayer_rpl_enhanced_v5_standalone.pdf}
+\caption{Conceptual multilayer RPL representation. The same physical nodes appear in routing, link-quality, temporal, and trust/anomaly layers, while the red node denotes the DRA mote. Dotted inter-layer links indicate that each layer contains a replica of the same physical mote.}
+\label{fig:app2_multilayer_rpl}
+\end{figure}
+
+Figure~\ref{fig:app2_multilayer_rpl} illustrates the distinction between a multilayer RPL graph and a collapsed single graph. Each layer preserves a different edge meaning: DODAG parent-child support, link-quality consistency, temporal behavior, and anomaly similarity. The GCN branches in the proposed model process these relation-specific neighborhoods separately before fusion. This is the conceptual reason why the model can test whether preserving layer identity improves DRA detection.
 
 \section{Node Features}
 For node $v_i$, the observable feature vector is

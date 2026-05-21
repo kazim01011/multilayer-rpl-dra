@@ -15,25 +15,28 @@ A combined appendix PDF is also provided:
 
 ## Appendix I: Cooja Trace Generation and Parsing
 
-Expanded simulation setup, DRA equations, parent-selection interpretation,
-parsed trace families, leakage-control rule, and held-out-seed rationale.
+Expanded simulation setup, complete workflow figure, DRA equations,
+parent-selection interpretation, parsed trace families, leakage-control rule,
+and held-out-seed rationale.
 
 ## Appendix II: Mathematical Model and Training Protocol
 
-Expanded multilayer graph notation, supra-adjacency interpretation,
-relation-specific adjacency equations, GCN/attention equations, loss function,
-threshold selection, complexity, and permutation-equivariance discussion.
+Expanded multilayer graph notation, conceptual multilayer RPL figure,
+supra-adjacency interpretation, relation-specific adjacency equations,
+GCN/attention equations, loss function, threshold selection, complexity, and
+permutation-equivariance discussion.
 
 ## Appendix III: Complete Detection Outputs
 
-Full held-out-seed metric table, metric definitions, confusion matrix,
-precision/recall/FPR figure, and discussion of what the table and figures mean.
+Full held-out-seed metric table, metric definitions, model-family comparison
+figure, confusion matrix, precision/recall/FPR figure, and discussion of what
+the table and figures mean.
 
 ## Appendix IV: Layer Analysis, Ablation, and Propagation Sensitivity
 
-Layer meaning, layer-density discussion, aggregation-support interpretation,
-single-layer and leave-one-layer-out ablation discussion, and propagation-depth
-sensitivity explanation.
+Layer meaning, layer-density figure, aggregation-support interpretation,
+single-layer and leave-one-layer-out ablation table and figure, and
+propagation-depth sensitivity explanation.
 
 ## Appendix V: Reproduction Commands
 
