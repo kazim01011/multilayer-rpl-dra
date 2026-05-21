@@ -1,0 +1,83 @@
+\documentclass[10pt]{article}
+\usepackage[letterpaper,margin=0.72in]{geometry}
+\usepackage{amsmath}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{float}
+\usepackage{enumitem}
+\hypersetup{colorlinks=true,linkcolor=blue,urlcolor=blue}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{5pt}
+\title{\vspace{-1.2cm}Appendix III\\Complete Detection Outputs}
+\author{Supplementary Material for the IEEE Internet of Things Journal Submission}
+\date{}
+\begin{document}
+\maketitle
+
+\section{Purpose of This Appendix}
+This appendix expands the compressed result table in the manuscript. It explains the metrics, reports the complete held-out-seed table, and discusses what the confusion matrix and precision--recall--FPR figure mean for DRA detection.
+
+\section{Metric Definitions}
+Let $TP$, $TN$, $FP$, and $FN$ denote true positives, true negatives, false positives, and false negatives for malicious-node detection. The main metrics are
+\begin{align}
+\mathrm{Recall} &= \frac{TP}{TP+FN},\\
+\mathrm{Specificity} &= \frac{TN}{TN+FP},\\
+\mathrm{BAcc} &= \frac{1}{2}(\mathrm{Recall}+\mathrm{Specificity}),\\
+\mathrm{Precision} &= \frac{TP}{TP+FP},\\
+\mathrm{F1} &= \frac{2\cdot \mathrm{Precision}\cdot \mathrm{Recall}}
+{\mathrm{Precision}+\mathrm{Recall}},\\
+\mathrm{FPR} &= \frac{FP}{FP+TN}.
+\end{align}
+Balanced accuracy is emphasized because raw accuracy can be misleading in imbalanced DRA detection: a detector can appear accurate by favoring the benign majority while missing attackers.
+
+\section{Complete Held-Out-Seed Results}
+\begin{table}[H]
+\centering
+\caption{Held-out-seed test performance.}
+\small
+\begin{tabular}{lccccc}
+\toprule
+Model & BAcc & F1 & Recall & Precision & FPR\\
+\midrule
+Logistic Regression & 0.668 & 0.465 & 0.489 & 0.443 & 0.154\\
+Random Forest & 0.662 & 0.443 & 0.611 & 0.347 & 0.287\\
+XGBoost & 0.671 & 0.468 & 0.507 & 0.435 & 0.165\\
+LightGBM & 0.613 & 0.381 & 0.370 & 0.392 & 0.144\\
+MLP & 0.665 & 0.437 & 0.759 & 0.307 & 0.429\\
+DQN & 0.606 & 0.383 & 0.707 & 0.263 & 0.496\\
+DDQN & 0.527 & 0.343 & 0.937 & 0.210 & 0.882\\
+Dueling DDQN & 0.664 & 0.434 & 0.789 & 0.300 & 0.461\\
+Agg-GCN & 0.621 & 0.395 & 0.489 & 0.331 & 0.247\\
+ML-GCN & \textbf{0.721} & \textbf{0.531} & 0.626 & \textbf{0.460} & 0.183\\
+Attn-ML-GCN & 0.689 & 0.489 & 0.567 & 0.430 & 0.188\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Discussion of the Table}
+The best balanced accuracy and F1-score are obtained by ML-GCN. This means that preserving the four graph relation layers improves the attacker/benign tradeoff under the held-out seed. The improvement is not simply caused by using a neural model: the MLP and Q-network-style baselines use the same node features but do not receive adjacency matrices, and their F1-scores remain below ML-GCN.
+
+Agg-GCN performs worse than ML-GCN because it collapses all relation layers into one support. This removes the difference between routing edges, link-quality edges, temporal similarity, and anomaly similarity. The result supports the manuscript's central claim: the relation identity of a multilayer RPL graph is useful, not merely the presence of more edges.
+
+Attn-ML-GCN remains competitive but does not surpass ML-GCN in this held-out split. This is useful scientifically: the attention mechanism adds interpretability and adaptive layer weighting, but the fixed multilayer model is the strongest detector in the current Cooja setting. The paper therefore avoids overstating attention as universally superior.
+
+\section{Confusion Matrix}
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{results/cooja_clean_5seed_full_comparison/figures/fig05_confusion_matrices.pdf}
+\caption{Confusion matrices for representative flat-feature, aggregate-graph, and multilayer graph models.}
+\end{figure}
+
+The confusion matrix shows whether a model obtains its score by detecting attackers, rejecting benign nodes, or over-triggering alarms. This is important for LLNs because false positives can cause unnecessary mitigation, parent reselection, or operator distrust. DDQN, for example, has high recall but a high FPR, meaning it catches many attackers while also marking many benign nodes as malicious. ML-GCN provides a more balanced behavior.
+
+\section{Precision, Recall, and FPR}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{results/cooja_clean_5seed_full_comparison/figures/fig03_precision_recall_fpr.pdf}
+\caption{Precision, recall, and false-positive-rate comparison.}
+\end{figure}
+
+This figure separates the practical detection tradeoff. High recall alone is not enough because an LLN defense system must avoid excessive false alarms. The proposed graph model improves F1 because it maintains reasonable recall while controlling FPR better than many high-recall flat-feature neural baselines.
+
+\end{document}

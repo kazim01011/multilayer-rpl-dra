@@ -1,0 +1,87 @@
+\documentclass[10pt]{article}
+\usepackage[letterpaper,margin=0.72in]{geometry}
+\usepackage{hyperref}
+\usepackage{listings}
+\usepackage{enumitem}
+\hypersetup{colorlinks=true,linkcolor=blue,urlcolor=blue}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{5pt}
+\lstset{basicstyle=\ttfamily\footnotesize,breaklines=true,frame=single,columns=fullflexible}
+\title{\vspace{-1.2cm}Appendix V\\Reproduction Commands}
+\author{Supplementary Material for the IEEE Internet of Things Journal Submission}
+\date{}
+\begin{document}
+\maketitle
+
+\section{Purpose of This Appendix}
+This appendix provides the command-level reproduction path. It is intended for reviewers and readers who want to regenerate the parsed traces, model results, tables, and figures.
+
+\section{Environment Setup}
+\begin{lstlisting}
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+\end{lstlisting}
+
+The repository is organized so that Cooja files, parsers, training scripts, result exports, and plotting scripts remain separate. This makes it possible to rerun only the parser, only the model benchmark, or only the figure generation stage.
+
+\section{Parse Cooja Logs}
+\begin{lstlisting}
+python scripts/parse_cooja_logs.py \
+  --log-root "/path/to/cooja-contiki-ng/examples/rpl-dra-ml/generated" \
+  --output data/cooja_clean_5seed
+\end{lstlisting}
+
+The parser creates node traces, packet-event summaries, graph snapshots, and labels. DRA audit logs are retained for verification but excluded from model inputs.
+
+\section{Run the Full Model Benchmark}
+\begin{lstlisting}
+python scripts/run_cooja_experiment.py \
+  --snapshots data/cooja_clean_5seed/node_snapshots.csv \
+  --output results/cooja_clean_5seed_full_comparison \
+  --models logistic_regression random_forest xgboost lightgbm mlp \
+           dqn ddqn dueling_ddqn agg_gcn ml_gcn attn_ml_gcn \
+  --epochs 350 \
+  --hidden-dim 48 \
+  --learning-rate 0.02 \
+  --positive-class-weight 2 \
+  --threshold-metric f1
+\end{lstlisting}
+
+The benchmark uses the same held-out-seed protocol as the paper: seeds 1--3 for training, seed 4 for validation, and seed 5 for final testing.
+
+\section{Run Layer Analysis}
+\begin{lstlisting}
+python scripts/analyze_layers.py \
+  --snapshots data/cooja_clean_5seed/node_snapshots.csv \
+  --output results/cooja_clean_5seed_layer_analysis
+\end{lstlisting}
+
+This command generates layer density, overlap, and aggregation-support artifacts used to explain why preserving relation identity matters.
+
+\section{Run Propagation Sensitivity}
+\begin{lstlisting}
+python scripts/run_graph_sensitivity.py \
+  --snapshots data/cooja_clean_5seed/node_snapshots.csv \
+  --output results/cooja_clean_5seed_graph_sensitivity \
+  --steps 1,2
+\end{lstlisting}
+
+The sensitivity output supports the one-hop GCN design used in the manuscript.
+
+\section{Generate Tables and Figures}
+\begin{lstlisting}
+python scripts/make_tables.py results/cooja_clean_5seed_full_comparison
+python scripts/make_figures.py results/cooja_clean_5seed_full_comparison
+\end{lstlisting}
+
+The generated figures are used directly in the manuscript and supplementary appendices.
+
+\section{Smoke Tests}
+\begin{lstlisting}
+pytest tests
+\end{lstlisting}
+
+The tests check parser behavior, graph construction, and key training utilities. They are not a substitute for rerunning the full Cooja benchmark, but they help verify that the repository environment is functioning.
+
+\end{document}

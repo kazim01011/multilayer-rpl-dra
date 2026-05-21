@@ -1,0 +1,196 @@
+\documentclass[10pt]{article}
+\usepackage[letterpaper,margin=0.72in]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{enumitem}
+\hypersetup{colorlinks=true,linkcolor=blue,urlcolor=blue}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{5pt}
+\title{\vspace{-1.2cm}Appendix II\\Mathematical Model and Training Protocol}
+\author{Supplementary Material for the IEEE Internet of Things Journal Submission}
+\date{}
+\begin{document}
+\maketitle
+
+\section{Purpose of This Appendix}
+This appendix expands the mathematical definitions that are compressed in the eight-page manuscript. It clarifies the multilayer graph representation, the relation-specific adjacency matrices, the GCN update, the attention fusion mechanism, the optimization objective, and the computational interpretation.
+
+\section{Multilayer RPL Graph}
+At each observation window, the parsed Cooja trace is converted into
+\begin{equation}
+\mathcal{G}_s=(V,\{A_s^{(\ell)}\}_{\ell\in\mathcal{L}},X_s,Y_s),
+\qquad
+\mathcal{L}=\{r,q,t,a\}.
+\label{eq:app2_graph}
+\end{equation}
+The set $V$ contains the same physical motes in every relation layer. The four layers encode different evidence channels: routing $(r)$, link-quality $(q)$, temporal behavior $(t)$, and trust/anomaly similarity $(a)$. The feature matrix is $X_s\in\mathbb{R}^{N\times F}$ and the label vector is $Y_s\in\{0,1\}^N$.
+
+The same physical node can be viewed as a set of layer replicas $(v_i,\ell)$. The conceptual supra-adjacency is
+\begin{equation}
+\mathcal{A}_{sup}=
+\begin{bmatrix}
+A^{(r)} & \lambda I & \lambda I & \lambda I\\
+\lambda I & A^{(q)} & \lambda I & \lambda I\\
+\lambda I & \lambda I & A^{(t)} & \lambda I\\
+\lambda I & \lambda I & \lambda I & A^{(a)}
+\end{bmatrix}.
+\label{eq:app2_supra}
+\end{equation}
+The implementation does not need to materialize this large block matrix. Instead, it computes relation-specific convolutions on the diagonal blocks and performs cross-layer coupling through fusion over the same node replicas. This makes the method easier to ablate because each RPL relation remains identifiable.
+
+\section{Node Features}
+For node $v_i$, the observable feature vector is
+\begin{equation}
+x_i=
+[\tilde{i},\tilde{R}_i,\tilde{G}_i,\tilde{S}_i,
+\tilde{M}_i,\tilde{N}_i,\tilde{D}_i,\tilde{T}_i,\tilde{P}_i],
+\label{eq:app2_features}
+\end{equation}
+where each component is standardized within the snapshot. Standardization avoids letting high-magnitude routing counters dominate lower-magnitude link and delay fields. No advertised-rank decrement or DRA audit hook is included in $x_i$.
+
+\section{Routing Layer}
+Let $p(i)$ be the preferred parent of node $v_i$. The routing layer is
+\begin{equation}
+A^{(r)}_{ij}=
+\begin{cases}
+1, & p(i)=j\ \mathrm{or}\ p(j)=i,\\
+0, & \mathrm{otherwise}.
+\end{cases}
+\label{eq:app2_routing}
+\end{equation}
+This layer is important because DRA directly targets parent selection by making the attacker appear closer to the root.
+
+\section{Link-Quality Layer}
+The link-quality layer uses the same observed parent-child support but weights edges according to the parent metric:
+\begin{equation}
+A^{(q)}_{ij}=
+\begin{cases}
+\left(\max\{M_i/M_0,1\}\right)^{-1},&
+p(i)=j\ \mathrm{or}\ p(j)=i,\\
+0,&\mathrm{otherwise}.
+\end{cases}
+\label{eq:app2_quality}
+\end{equation}
+Lower parent metric values imply stronger weights. This layer lets the model distinguish a structurally attractive parent from a reliable parent.
+
+\section{Temporal Layer}
+Let
+\begin{equation}
+z_i^{(t)}=[D_i,\Delta p_i,\Delta R_i],
+\label{eq:app2_temporal_descriptor}
+\end{equation}
+where $D_i$ is delay, $\Delta p_i$ is parent-switching behavior, and $\Delta R_i$ is rank-change behavior in the observation window. Temporal similarity is
+\begin{equation}
+S^{(t)}_{ij}=
+\exp\left(-\frac{\|z_i^{(t)}-z_j^{(t)}\|_2^2}{\sigma_t^2}\right).
+\label{eq:app2_temporal_similarity}
+\end{equation}
+Edges are retained when this similarity is among the strongest temporal relations. This layer is not an attack label; it is a behavioral neighborhood showing which nodes exhibit similar dynamics.
+
+\section{Trust/Anomaly Layer}
+The trust/anomaly descriptor is
+\begin{equation}
+b_i=[a_i^{(R)},a_i^{(M)},1-P_i],
+\label{eq:app2_anomaly_descriptor}
+\end{equation}
+where $a_i^{(R)}$ is a low-rank anomaly score, $a_i^{(M)}$ is parent-metric deviation, and $1-P_i$ is packet-loss behavior. The corresponding similarity is
+\begin{equation}
+A^{(a)}_{ij}=
+\exp\left(-\frac{\|b_i-b_j\|_2^2}{\sigma_a^2}\right).
+\label{eq:app2_anomaly}
+\end{equation}
+This layer should be interpreted as suspicious-behavior similarity, not a direct maliciousness label. It gives the GCN a structured channel to compare nodes with similar abnormal patterns.
+
+\section{Layer-Specific GCN}
+For every layer $\ell$, self-loops are added:
+\begin{equation}
+\tilde{A}^{(\ell)}=A^{(\ell)}+I.
+\label{eq:app2_self_loop}
+\end{equation}
+The normalized adjacency is
+\begin{equation}
+\hat{A}^{(\ell)}=(\tilde{D}^{(\ell)})^{-1/2}
+\tilde{A}^{(\ell)}
+(\tilde{D}^{(\ell)})^{-1/2},
+\qquad
+\tilde{D}^{(\ell)}_{ii}=\sum_j \tilde{A}^{(\ell)}_{ij}.
+\label{eq:app2_norm}
+\end{equation}
+A one-hop relation-specific convolution is
+\begin{equation}
+H^{(\ell)}=\phi(\hat{A}^{(\ell)}XW^{(\ell)}+b^{(\ell)}).
+\label{eq:app2_gcn}
+\end{equation}
+The operation means that node $v_i$ updates its representation by combining its own features with the features of neighbors connected under relation $\ell$.
+
+\section{Attention Fusion}
+The non-attentive ML-GCN concatenates relation embeddings with fixed layer treatment. Attn-ML-GCN instead learns a scalar score $\theta_\ell$ for each relation:
+\begin{equation}
+\alpha_\ell=
+\frac{\exp(\theta_\ell)}
+{\sum_{m\in\mathcal{L}}\exp(\theta_m)}.
+\label{eq:app2_attention}
+\end{equation}
+The fused representation is
+\begin{equation}
+H=
+[\alpha_rH^{(r)}\Vert
+\alpha_qH^{(q)}\Vert
+\alpha_tH^{(t)}\Vert
+\alpha_aH^{(a)}].
+\label{eq:app2_fusion}
+\end{equation}
+This formulation keeps the relation channels separated while still allowing the model to emphasize stronger evidence channels during training.
+
+\section{Node Classification and Loss}
+The classifier maps $H_i$ to a two-class probability vector:
+\begin{equation}
+Z_i=\mathrm{softmax}(H_iW_o+b_o).
+\label{eq:app2_softmax}
+\end{equation}
+Weighted cross-entropy is used:
+\begin{equation}
+\mathcal{J}(\Theta)=
+-\sum_{i\in\mathcal{V}_{tr}}\sum_{c=0}^{1}
+\omega_c\mathbb{I}(y_i=c)\log Z_{i,c}.
+\label{eq:app2_loss}
+\end{equation}
+The positive-class weight $\omega_1$ compensates for the fact that malicious motes are the minority class at 10\% and 20\% attack ratios.
+
+\section{Threshold Selection}
+The model outputs probabilities, but the final detector needs a binary decision. The threshold $\tau$ is selected on validation seed 4:
+\begin{equation}
+\tau^\star=
+\arg\max_{\tau\in[0,1]}
+\mathrm{F1}_{val}(\tau).
+\label{eq:app2_threshold}
+\end{equation}
+The selected threshold is fixed before evaluating test seed 5. This avoids tuning on the test set.
+
+\section{Computational Cost}
+For sparse matrices, one forward pass has dominant cost
+\begin{equation}
+\mathcal{O}\left(
+\sum_{\ell\in\mathcal{L}} |E^{(\ell)}|F
++|\mathcal{L}|NFd
++N|\mathcal{L}|d
+\right).
+\label{eq:app2_complexity}
+\end{equation}
+The first term is sparse message passing, the second is feature projection, and the third is fusion. Attention adds only a small cost:
+\begin{equation}
+\mathcal{O}(|\mathcal{L}|Nd+|\mathcal{L}|).
+\label{eq:app2_attention_cost}
+\end{equation}
+
+\section{Permutation Equivariance}
+For any node permutation matrix $P$, the model satisfies
+\begin{equation}
+f_\Theta(PX,\{P\hat{A}^{(\ell)}P^T\}_{\ell\in\mathcal{L}})
+=P f_\Theta(X,\{\hat{A}^{(\ell)}\}_{\ell\in\mathcal{L}}).
+\label{eq:app2_equivariance}
+\end{equation}
+Thus, predictions are tied to graph structure and features rather than arbitrary node numbering.
+
+\end{document}

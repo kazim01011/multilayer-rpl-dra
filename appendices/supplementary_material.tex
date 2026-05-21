@@ -1,24 +1,10 @@
 \documentclass[10pt]{article}
 \usepackage[letterpaper,margin=0.72in]{geometry}
-\usepackage{amsmath,amssymb}
-\usepackage{booktabs}
-\usepackage{graphicx}
 \usepackage{hyperref}
-\usepackage{xcolor}
-\usepackage{array}
-\usepackage{listings}
-\usepackage{caption}
-\usepackage{float}
-\hypersetup{colorlinks=true,linkcolor=blue,urlcolor=blue,citecolor=blue}
-\setlength{\parskip}{4pt}
+\usepackage{pdfpages}
+\hypersetup{colorlinks=true,linkcolor=blue,urlcolor=blue}
 \setlength{\parindent}{0pt}
-\captionsetup{font=small}
-\lstset{
-  basicstyle=\ttfamily\footnotesize,
-  breaklines=true,
-  frame=single,
-  columns=fullflexible
-}
+\setlength{\parskip}{6pt}
 
 \title{\vspace{-1.2cm}Supplementary Material\\
 \large Multilayer Graph Learning for Decreased Rank Attack Detection in RPL-Based IoT Networks}
@@ -29,266 +15,24 @@
 \maketitle
 
 \section*{Scope}
-This supplementary document contains technical details and expanded outputs that were compressed out of the eight-page IEEE Internet of Things Journal manuscript. The main paper reports the central controlled comparison. This document records the supporting Cooja trace protocol, mathematical details, complete result artifacts, ablation material, and reproduction commands.
+This combined supplementary PDF collects the five standalone GitHub appendices
+referenced from the eight-page IEEE Internet of Things Journal manuscript.
+Each appendix is also provided as a separate PDF in the repository so that
+readers can open the exact item cited in the paper.
 
-\tableofcontents
-
-\newpage
-\section{Appendix I: Cooja Trace Generation and Parsing}
-
-\subsection{Simulation Scope}
-The benchmark uses Cooja/Contiki-NG traces rather than a purely synthetic feature generator. Each simulated network has one RPL root and 49 non-root motes. The decreased-rank attack (DRA) ratios are 10\%, 20\%, and 30\%, corresponding to 5, 10, and 15 malicious motes, respectively. Five independent topology and attacker-placement seeds are used for each ratio, giving 15 Cooja logs. Each run lasts 600 s; the first 60 s are removed as warm-up, and the remaining trace is aggregated into 60 s observation windows. This produces 135 graph snapshots and 6750 node-level decisions.
-
-\subsection{DRA Mechanism}
-For node $v_i$, let $R_i$ be its actual RPL rank and let $R_i^{adv}$ be the rank advertised through DIO control messages. Under normal operation,
-\begin{equation}
-R_i^{adv}=R_i .
-\end{equation}
-For a malicious mote $i\in\mathcal{M}$, the DRA implementation advertises an artificially lower rank:
-\begin{equation}
-R_i^{adv}=\max(R_{\min}, R_i-\delta_i), \qquad \delta_i>0.
-\end{equation}
-A neighboring node $v_j$ may then select a parent from its candidate set $\mathcal{N}_j$ using an objective that depends on advertised rank and link cost:
-\begin{equation}
-p(j)=\arg\min_{k\in\mathcal{N}_j}\Psi(R_k^{adv},Q_{jk}).
-\end{equation}
-This formulation makes DRA a routing-structure attack: the malicious mote does not need to jam the channel or modify packets directly; it changes parent-selection incentives by advertising a misleading rank.
-
-\subsection{Parsed Tables and Leakage Control}
-The parser separates the Cooja serial log into four artifact families:
+\section*{Appendix List}
 \begin{itemize}
-  \item metadata for scenario ratio, seed, and attacker placement;
-  \item periodic node traces, including rank, DAG rank, preferred parent, parent metric, RSSI, neighbor count, role, and scenario label;
-  \item packet events, including transmission count, successful receptions, delivery delay, and packet-delivery ratio (PDR);
-  \item DRA audit records, which verify when malicious motes advertise manipulated ranks.
+\item Appendix I: Cooja Trace Generation and Parsing.
+\item Appendix II: Mathematical Model and Training Protocol.
+\item Appendix III: Complete Detection Outputs.
+\item Appendix IV: Layer Analysis, Ablation, and Propagation Sensitivity.
+\item Appendix V: Reproduction Commands.
 \end{itemize}
 
-The audit records are deliberately excluded from the model feature matrix and from all adjacency matrices. They are used only to verify that the attack is active and to audit the parser. Thus, the detector learns from observable node, routing, link, and packet behavior rather than from the internal attack hook.
-
-\newpage
-\section{Appendix II: Mathematical Model and Training Protocol}
-
-\subsection{Multilayer Graph Representation}
-At each observation window, the network is represented as
-\begin{equation}
-\mathcal{G}=(V,\{A^{(\ell)}\}_{\ell\in\mathcal{L}},X,Y), \qquad
-\mathcal{L}=\{r,q,t,a\},
-\end{equation}
-where $r$, $q$, $t$, and $a$ denote routing, link-quality, temporal, and trust/anomaly layers. The feature matrix $X\in\mathbb{R}^{N\times F}$ contains observable node and packet fields. For node $v_i$,
-\begin{equation}
-x_i=[\tilde{i},\tilde{R}_i,\tilde{G}_i,\tilde{S}_i,\tilde{M}_i,
-\tilde{N}_i,\tilde{D}_i,\tilde{T}_i,\tilde{P}_i],
-\end{equation}
-where the terms are normalized node identifier, RPL rank, DAG rank, RSSI, parent metric, neighbor count, mean delay, transmission count, and PDR.
-
-\subsection{Layer Construction}
-The routing layer preserves DODAG parent-child support:
-\begin{equation}
-A_{ij}^{(r)}=
-\begin{cases}
-1, & p(i)=j \ \mathrm{or}\ p(j)=i,\\
-0, & \mathrm{otherwise}.
-\end{cases}
-\end{equation}
-The link-quality layer uses the same support but weights edges by parent metric:
-\begin{equation}
-A_{ij}^{(q)}=
-\begin{cases}
-\left(\max\{M_i/M_0,1\}\right)^{-1}, & p(i)=j \ \mathrm{or}\ p(j)=i,\\
-0, & \mathrm{otherwise}.
-\end{cases}
-\end{equation}
-Temporal and trust/anomaly layers use similarity edges:
-\begin{equation}
-A_{ij}^{(\ell)}=
-\exp\left(-\frac{\|z_i^{(\ell)}-z_j^{(\ell)}\|_2^2}{\sigma_\ell^2}\right),\qquad
-\ell\in\{t,a\},
-\end{equation}
-with only the strongest similarity links retained.
-
-\subsection{Model Operations}
-For each layer, self-loops are added and the adjacency is symmetrically normalized to obtain $\hat{A}^{(\ell)}$. A layer-specific GCN branch computes
-\begin{equation}
-H^{(\ell)}=\phi(\hat{A}^{(\ell)}XW^{(\ell)}).
-\end{equation}
-ML-GCN fuses layer embeddings by fixed concatenation. Attn-ML-GCN learns a scalar attention weight per relation:
-\begin{equation}
-\alpha_\ell=\frac{\exp(\theta_\ell)}{\sum_{m\in\mathcal{L}}\exp(\theta_m)},\qquad
-H=[\alpha_rH^{(r)}\Vert\alpha_qH^{(q)}\Vert\alpha_tH^{(t)}\Vert\alpha_aH^{(a)}].
-\end{equation}
-Training minimizes weighted cross-entropy:
-\begin{equation}
-\mathcal{J}(\Theta)=
--\sum_{i\in\mathcal{V}_{tr}}\sum_{c=0}^{1}
-\omega_c\mathbb{I}(y_i=c)\log Z_{i,c}.
-\end{equation}
-
-\subsection{Complexity and Equivariance}
-For sparse matrices, the dominant forward cost of one ML-GCN block is
-\begin{equation}
-\mathcal{C}_{ML}=
-\mathcal{O}\left(\sum_{\ell\in\mathcal{L}} |E^{(\ell)}|F
-+|\mathcal{L}|NFd+N|\mathcal{L}|d\right),
-\end{equation}
-where $F$ is the input-feature dimension and $d$ is the hidden dimension. Attention adds
-\begin{equation}
-\mathcal{C}_{attn}=\mathcal{O}(|\mathcal{L}|Nd+|\mathcal{L}|).
-\end{equation}
-For any node permutation matrix $P$, the model satisfies
-\begin{equation}
-f_\Theta(PX,\{P\hat A^{(\ell)}P^T\}_{\ell\in\mathcal{L}})
-=P f_\Theta(X,\{\hat A^{(\ell)}\}_{\ell\in\mathcal{L}}),
-\end{equation}
-so predictions depend on graph structure and features rather than arbitrary node ordering.
-
-\newpage
-\section{Appendix III: Complete Detection Outputs}
-
-Table~\ref{tab:full_results} reports the held-out-seed result table used to derive the compressed table in the manuscript. The confusion-matrix figure is included to show decision counts for representative flat-feature, aggregate-graph, and multilayer graph models.
-
-\begin{table}[H]
-\centering
-\caption{Held-out-seed test performance.}
-\label{tab:full_results}
-\small
-\begin{tabular}{lccccc}
-\toprule
-Model & BAcc & F1 & Recall & Precision & FPR\\
-\midrule
-Logistic Regression & 0.668 & 0.465 & 0.489 & 0.443 & 0.154\\
-Random Forest & 0.662 & 0.443 & 0.611 & 0.347 & 0.287\\
-XGBoost & 0.671 & 0.468 & 0.507 & 0.435 & 0.165\\
-LightGBM & 0.613 & 0.381 & 0.370 & 0.392 & 0.144\\
-MLP & 0.665 & 0.437 & 0.759 & 0.307 & 0.429\\
-DQN & 0.606 & 0.383 & 0.707 & 0.263 & 0.496\\
-DDQN & 0.527 & 0.343 & 0.937 & 0.210 & 0.882\\
-Dueling DDQN & 0.664 & 0.434 & 0.789 & 0.300 & 0.461\\
-Agg-GCN & 0.621 & 0.395 & 0.489 & 0.331 & 0.247\\
-ML-GCN & \textbf{0.721} & \textbf{0.531} & 0.626 & \textbf{0.460} & 0.183\\
-Attn-ML-GCN & 0.689 & 0.489 & 0.567 & 0.430 & 0.188\\
-\bottomrule
-\end{tabular}
-\end{table}
-
-\begin{figure}[H]
-\centering
-\includegraphics[width=\textwidth]{results/cooja_clean_5seed_full_comparison/figures/fig05_confusion_matrices.pdf}
-\caption{Complete confusion-matrix figure generated by the repository pipeline.}
-\end{figure}
-
-\begin{figure}[H]
-\centering
-\includegraphics[width=0.92\textwidth]{results/cooja_clean_5seed_full_comparison/figures/fig03_precision_recall_fpr.pdf}
-\caption{Precision, recall, and FPR comparison for the held-out-seed benchmark.}
-\end{figure}
-
-\newpage
-\section{Appendix IV: Layer Analysis, Ablation, and Propagation Sensitivity}
-
-\subsection{Layer Structure}
-The routing and link-quality layers are sparse parent-child supports. The temporal and trust/anomaly layers are denser because they encode behavioral similarity. Collapsing all layers into one support creates edge-support inflation and removes relation identity.
-
-\begin{table}[H]
-\centering
-\caption{Mean structural properties of the four RPL layers.}
-\small
-\begin{tabular}{lccc}
-\toprule
-Layer & Mean edges & Density & Edge share\\
-\midrule
-Routing & 49.00 & 0.040 & 0.023\\
-Link quality & 49.00 & 0.040 & 0.023\\
-Temporal & 885.78 & 0.723 & 0.410\\
-Trust/anomaly & 1154.90 & 0.943 & 0.544\\
-\bottomrule
-\end{tabular}
-\end{table}
-
-\begin{figure}[H]
-\centering
-\includegraphics[width=0.82\textwidth]{results/cooja_clean_5seed_layer_analysis/figures/fig07_aggregation_support.pdf}
-\caption{Aggregation-support analysis. Layer aggregation increases graph support and obscures relation identity.}
-\end{figure}
-
-\subsection{Layer Ablation}
-Table~\ref{tab:ablation} gives the expanded ablation values. The full multilayer model provides the best F1-score in the validation-selected manuscript setting, while routing-only and link-quality-only variants remain competitive because DRA directly targets parent selection.
-
-\begin{table}[H]
-\centering
-\caption{ML-GCN layer ablation results.}
-\label{tab:ablation}
-\small
-\begin{tabular}{lccc}
-\toprule
-Variant & BAcc & F1 & FPR\\
-\midrule
-All layers (ML-GCN) & \textbf{0.721} & \textbf{0.531} & 0.183\\
-Routing only & 0.719 & 0.509 & 0.265\\
-Link-quality only & 0.706 & 0.495 & 0.262\\
-Without temporal & 0.693 & 0.481 & 0.258\\
-Without routing & 0.677 & 0.469 & 0.212\\
-Without link quality & 0.671 & 0.471 & \textbf{0.150}\\
-Temporal only & 0.525 & 0.337 & 0.801\\
-Trust/anomaly only & 0.517 & 0.341 & 0.967\\
-\bottomrule
-\end{tabular}
-\end{table}
-
-\subsection{Propagation Sensitivity}
-The graph sensitivity experiment evaluates one-hop and two-hop propagation. Two-hop propagation reduces performance for Agg-GCN, ML-GCN, and Attn-ML-GCN, suggesting that deeper propagation can overmix node-specific evidence in small LLN snapshots.
-
-\begin{figure}[H]
-\centering
-\includegraphics[width=0.92\textwidth]{results/cooja_clean_5seed_graph_sensitivity/figures/fig08_propagation_sensitivity.pdf}
-\caption{Propagation-depth sensitivity for graph-based models.}
-\end{figure}
-
-\newpage
-\section{Appendix V: Reproduction Commands}
-
-\subsection{Environment}
-\begin{lstlisting}
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-\end{lstlisting}
-
-\subsection{Parse Cooja Logs}
-\begin{lstlisting}
-python scripts/parse_cooja_logs.py \
-  --log-root "/path/to/cooja-contiki-ng/examples/rpl-dra-ml/generated" \
-  --output data/cooja
-\end{lstlisting}
-
-\subsection{Run Validation-Selected Benchmark}
-\begin{lstlisting}
-python scripts/run_cooja_experiment.py \
-  --snapshots data/cooja_clean_5seed/node_snapshots.csv \
-  --output results/cooja_clean_5seed_validation_selected \
-  --models dqn ddqn dueling_ddqn agg_gcn ml_gcn attn_ml_gcn \
-  --epochs 350 \
-  --hidden-dim 48 \
-  --learning-rate 0.02 \
-  --positive-class-weight 2 \
-  --threshold-metric f1
-\end{lstlisting}
-
-\subsection{Run Layer Analysis and Propagation Sensitivity}
-\begin{lstlisting}
-python scripts/analyze_layers.py \
-  --snapshots data/cooja_clean_5seed/node_snapshots.csv \
-  --output results/cooja_clean_5seed_layer_analysis
-
-python scripts/run_graph_sensitivity.py \
-  --snapshots data/cooja_clean_5seed/node_snapshots.csv \
-  --output results/cooja_clean_5seed_graph_sensitivity \
-  --steps 1,2
-\end{lstlisting}
-
-\subsection{Generate Tables and Figures}
-\begin{lstlisting}
-python scripts/make_tables.py results/cooja_clean_5seed_full_comparison
-python scripts/make_figures.py results/cooja_clean_5seed_full_comparison
-\end{lstlisting}
+\includepdf[pages=-]{appendices/appendix_i_cooja_trace_generation.pdf}
+\includepdf[pages=-]{appendices/appendix_ii_mathematical_model.pdf}
+\includepdf[pages=-]{appendices/appendix_iii_complete_detection_outputs.pdf}
+\includepdf[pages=-]{appendices/appendix_iv_layer_analysis.pdf}
+\includepdf[pages=-]{appendices/appendix_v_reproduction_commands.pdf}
 
 \end{document}

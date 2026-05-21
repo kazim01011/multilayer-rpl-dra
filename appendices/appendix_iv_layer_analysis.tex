@@ -1,0 +1,89 @@
+\documentclass[10pt]{article}
+\usepackage[letterpaper,margin=0.72in]{geometry}
+\usepackage{amsmath}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{float}
+\hypersetup{colorlinks=true,linkcolor=blue,urlcolor=blue}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{5pt}
+\title{\vspace{-1.2cm}Appendix IV\\Layer Analysis, Ablation, and Propagation Sensitivity}
+\author{Supplementary Material for the IEEE Internet of Things Journal Submission}
+\date{}
+\begin{document}
+\maketitle
+
+\section{Purpose of This Appendix}
+This appendix explains why the paper uses four relation layers and how each layer contributes to the final model. It expands the layer-density analysis, aggregation-support figure, ablation table, and propagation-depth sensitivity.
+
+\section{Layer Meaning}
+The four relation layers are designed to separate different mechanisms of RPL behavior:
+\begin{itemize}
+\item \textbf{Routing layer}: parent-child DODAG structure. This is the layer most directly affected by DRA because the attack changes parent-selection incentives.
+\item \textbf{Link-quality layer}: weighted version of the observed parent-child support. It distinguishes low-cost and high-cost parent relationships.
+\item \textbf{Temporal layer}: similarity in delay, packet-delivery behavior, and route dynamics across observation windows.
+\item \textbf{Trust/anomaly layer}: similarity in rank inconsistency, parent-metric deviation, and delivery loss.
+\end{itemize}
+
+\section{Layer Structure}
+\begin{table}[H]
+\centering
+\caption{Mean structural properties of the four RPL relation layers.}
+\small
+\begin{tabular}{lccc}
+\toprule
+Layer & Mean edges & Density & Edge share\\
+\midrule
+Routing & 49.00 & 0.040 & 0.023\\
+Link quality & 49.00 & 0.040 & 0.023\\
+Temporal & 885.78 & 0.723 & 0.410\\
+Trust/anomaly & 1154.90 & 0.943 & 0.544\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The routing and link-quality layers are sparse because each node has a limited parent-child structure. The temporal and trust/anomaly layers are denser because they connect nodes by similarity. If all edges are collapsed into one graph, the dense layers dominate the message-passing support and the model loses the distinction between physical routing relations and behavioral similarity relations.
+
+\section{Aggregation-Support Figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.84\textwidth]{results/cooja_clean_5seed_layer_analysis/figures/fig07_aggregation_support.pdf}
+\caption{Aggregation-support analysis. Collapsing relation layers increases graph support and hides relation identity.}
+\end{figure}
+
+The figure explains why Agg-GCN is not equivalent to ML-GCN. Agg-GCN receives one combined support, so a message can come from a routing neighbor, a link-quality neighbor, or an anomaly-similar node without preserving which relation produced that edge. ML-GCN keeps the four channels separate and only fuses them after relation-specific convolution.
+
+\section{Layer Ablation}
+\begin{table}[H]
+\centering
+\caption{Single-layer and leave-one-layer-out ML-GCN ablation.}
+\small
+\begin{tabular}{lccc}
+\toprule
+Variant & BAcc & F1 & FPR\\
+\midrule
+All layers (ML-GCN) & \textbf{0.721} & \textbf{0.531} & 0.183\\
+Routing only & 0.719 & 0.509 & 0.265\\
+Link-quality only & 0.706 & 0.495 & 0.262\\
+Without temporal & 0.693 & 0.481 & 0.258\\
+Without routing & 0.677 & 0.469 & 0.212\\
+Without link quality & 0.671 & 0.471 & \textbf{0.150}\\
+Temporal only & 0.525 & 0.337 & 0.801\\
+Trust/anomaly only & 0.517 & 0.341 & 0.967\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The ablation indicates that routing and link-quality information are highly informative for DRA detection, which is expected because decreased-rank attacks manipulate routing attractiveness. However, the full multilayer model obtains the best F1-score, showing that temporal and anomaly information add useful context when combined with the routing layers. The temporal-only and anomaly-only variants perform poorly because behavioral similarity alone is too broad and can connect benign nodes with similar noisy dynamics.
+
+\section{Propagation Sensitivity}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{results/cooja_clean_5seed_graph_sensitivity/figures/fig08_propagation_sensitivity.pdf}
+\caption{Propagation-depth sensitivity for graph-based models.}
+\end{figure}
+
+The sensitivity experiment compares one-hop and two-hop propagation. In this benchmark, two-hop propagation reduces the detection quality of the graph models. The reason is practical: the LLN snapshots are small, and DRA evidence can be localized around parent-child and nearby behavioral relations. Additional propagation mixes information from wider neighborhoods and can blur the difference between malicious and benign nodes. This supports the paper's choice of one-hop relation-specific message passing.
+
+\end{document}

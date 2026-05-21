@@ -1,34 +1,40 @@
 # Supplementary Material
 
-The paper-style supplementary material for the IEEE Internet of Things Journal
-submission is provided as a PDF:
+The supplementary material for the IEEE Internet of Things Journal submission
+is now provided as separate reviewer-facing PDF appendices. These PDFs expand
+the compressed material from the eight-page manuscript with equations,
+figure/table discussion, implementation detail, and reproduction commands.
 
-[Open supplementary_material.pdf](./supplementary_material.pdf)
+- [Appendix I: Cooja Trace Generation and Parsing](./appendix_i_cooja_trace_generation.pdf)
+- [Appendix II: Mathematical Model and Training Protocol](./appendix_ii_mathematical_model.pdf)
+- [Appendix III: Complete Detection Outputs](./appendix_iii_complete_detection_outputs.pdf)
+- [Appendix IV: Layer Analysis, Ablation, and Propagation Sensitivity](./appendix_iv_layer_analysis.pdf)
+- [Appendix V: Reproduction Commands](./appendix_v_reproduction_commands.pdf)
 
-This PDF contains the material that was compressed out of the eight-page
-manuscript while keeping the paper itself within the journal limit.
+A combined PDF from the earlier appendix pass is also retained for continuity:
+[supplementary_material.pdf](./supplementary_material.pdf).
 
 ## Appendix I: Cooja Trace Generation and Parsing
 
-Expanded simulation setup, DRA logging, parsed tables, and the separation of
-observable node features from DRA audit records.
+Expanded simulation setup, DRA equations, parent-selection interpretation,
+parsed trace families, leakage-control rule, and held-out-seed rationale.
 
 ## Appendix II: Mathematical Model and Training Protocol
 
-Detailed DRA formulation, multilayer graph notation, layer construction,
-GCN/attention equations, optimization objective, complexity, and equivariance
-discussion.
+Expanded multilayer graph notation, supra-adjacency interpretation,
+relation-specific adjacency equations, GCN/attention equations, loss function,
+threshold selection, complexity, and permutation-equivariance discussion.
 
 ## Appendix III: Complete Detection Outputs
 
-Full held-out-seed metric table, confusion matrix, and precision/recall/FPR
-figure.
+Full held-out-seed metric table, metric definitions, confusion matrix,
+precision/recall/FPR figure, and discussion of what the table and figures mean.
 
 ## Appendix IV: Layer Analysis, Ablation, and Propagation Sensitivity
 
-Layer density and overlap analysis, aggregation-support visualization,
-single-layer and leave-one-layer-out ablations, and propagation-depth
-sensitivity.
+Layer meaning, layer-density discussion, aggregation-support interpretation,
+single-layer and leave-one-layer-out ablation discussion, and propagation-depth
+sensitivity explanation.
 
 ## Appendix V: Reproduction Commands
 
